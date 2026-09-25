@@ -6,9 +6,47 @@ global.fetch = undiciFetch as any;
 import { Command } from 'commander';
 import { settingsManager } from './config/settings.js';
 import { geminiWebClient } from './services/gemini-web.js';
+import type { TAuthMode } from './types/index.js';
 import { spawn } from 'child_process';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
+
+function hiddenPrompt(query: string): Promise<string> {
+  return new Promise((resolve) => {
+    process.stdout.write(query);
+    const stdin = process.stdin;
+    const wasRaw = stdin.isRaw;
+    stdin.resume();
+    stdin.setRawMode?.(true);
+    stdin.setEncoding('utf8');
+
+    let value = '';
+    const onData = (char: string) => {
+      switch (char) {
+        case '\n':
+        case '\r':
+        case '\u0004':
+          stdin.setRawMode?.(!!wasRaw);
+          stdin.pause();
+          stdin.removeListener('data', onData);
+          process.stdout.write('\n');
+          resolve(value.trim());
+          break;
+        case '\u0003':
+          process.exit(1);
+          break;
+        case '\u007f':
+        case '\b':
+          value = value.slice(0, -1);
+          break;
+        default:
+          value += char;
+          break;
+      }
+    };
+    stdin.on('data', onData);
+  });
+}
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
@@ -82,6 +120,69 @@ program
     console.log('');
     console.log('To change settings, you can edit: ~/.nano-banana/config.json');
     console.log('Or use the MCP tools in your chat client.');
+  });
+
+program
+  .command('cookies')
+  .description('Configure free gemini-web auth by pasting fresh Google cookies (hidden input)')
+  .option('--psid <value>', 'Set __Secure-1PSID non-interactively (lands in shell history — prefer interactive mode)')
+  .option('--psidts <value>', 'Set __Secure-1PSIDTS non-interactively')
+  .action(async (options) => {
+    await settingsManager.load();
+    let psid = options.psid as string | undefined;
+    let psidts = options.psidts as string | undefined;
+    if (!psid) {
+      console.log('Get these from gemini.google.com → DevTools → Application → Cookies.');
+      psid = await hiddenPrompt('__Secure-1PSID: ');
+      const ts = await hiddenPrompt('__Secure-1PSIDTS (optional, Enter to skip): ');
+      psidts = ts || undefined;
+    }
+    if (!psid) {
+      console.error('__Secure-1PSID is required.');
+      process.exit(1);
+    }
+    await settingsManager.setCookies({ secure1psid: psid, secure1psidts: psidts });
+    console.log('✅ Cookies saved to ~/.nano-banana/config.json — gemini-web mode active.');
+    console.log('Restart the MCP server (or reload it in your client) to pick this up.');
+  });
+
+program
+  .command('apikey')
+  .description('Configure official Gemini API key mode (no cookies, no expiry, billed)')
+  .option('--key <value>', 'Set GEMINI_API_KEY non-interactively (lands in shell history — prefer interactive mode)')
+  .action(async (options) => {
+    await settingsManager.load();
+    let key = options.key as string | undefined;
+    if (!key) {
+      console.log('Get a key at: https://aistudio.google.com/apikey');
+      key = await hiddenPrompt('GEMINI_API_KEY: ');
+    }
+    if (!key) {
+      console.error('API key is required.');
+      process.exit(1);
+    }
+    await settingsManager.setApiKey(key);
+    console.log('✅ API key saved to ~/.nano-banana/config.json — apiKey mode active.');
+    console.log('Restart the MCP server (or reload it in your client) to pick this up.');
+  });
+
+program
+  .command('mode <mode>')
+  .description('Switch between already-configured auth modes: apiKey | gemini-web')
+  .action(async (mode: string) => {
+    await settingsManager.load();
+    if (mode !== 'apiKey' && mode !== 'gemini-web') {
+      console.error('Mode must be "apiKey" or "gemini-web"');
+      process.exit(1);
+    }
+    try {
+      await settingsManager.setAuthMode(mode as TAuthMode);
+      console.log(`✅ Auth mode switched to ${mode}.`);
+      console.log('Restart the MCP server (or reload it in your client) to pick this up.');
+    } catch (e) {
+      console.error(e instanceof Error ? e.message : String(e));
+      process.exit(1);
+    }
   });
 
 program.parse(process.argv);

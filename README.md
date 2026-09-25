@@ -64,6 +64,32 @@ That's it! You can now generate images for free.
 
 ---
 
+## 🔁 Refreshing cookies / switching to the official API (CLI)
+
+The free `gemini-web` cookies expire periodically (Google rotates the session). Two ways to deal with it, both via the bundled CLI (no editing `~/.nano-banana/config.json` by hand, no secrets typed into chat):
+
+**Refresh cookies (stays free):**
+```bash
+npx prompt2pic cookies
+```
+Prompts for `__Secure-1PSID` / `__Secure-1PSIDTS` with hidden input (not echoed, not saved to shell history). Grab the values the same way as above (DevTools → Application → Cookies → gemini.google.com). Restart the MCP server afterward to pick up the change.
+
+**Switch to the official API key (never expires, billed):**
+```bash
+npx prompt2pic apikey
+```
+Prompts for a `GEMINI_API_KEY` (get one at [aistudio.google.com/apikey](https://aistudio.google.com/apikey)), hidden input, no expiry to manage.
+
+**Toggle between modes once both are configured:**
+```bash
+npx prompt2pic mode gemini-web   # free, cookie-based
+npx prompt2pic mode apiKey       # official, no expiry
+```
+
+Non-interactive variants (`--psid`, `--psidts`, `--key`) exist for scripting but land the secret in shell history — prefer the interactive prompts.
+
+---
+
 ## 🌐 How to Use with ChatGPT Web (Custom GPTs)
 
 Want to use your free Gemini image generation directly inside ChatGPT on the web? This repo includes a built-in Express server and an `openapi.json` schema precisely for Custom GPT Actions.
