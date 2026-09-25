@@ -68,22 +68,24 @@ That's it! You can now generate images for free.
 
 The free `gemini-web` cookies expire periodically (Google rotates the session). Two ways to deal with it, both via the bundled CLI (no editing `~/.nano-banana/config.json` by hand, no secrets typed into chat):
 
+(Run these from the project folder; `node dist/cli.js` is `prompt2pic` if you `npm link` it globally.)
+
 **Refresh cookies (stays free):**
 ```bash
-npx prompt2pic cookies
+node dist/cli.js cookies
 ```
 Prompts for `__Secure-1PSID` / `__Secure-1PSIDTS` with hidden input (not echoed, not saved to shell history). Grab the values the same way as above (DevTools → Application → Cookies → gemini.google.com). Restart the MCP server afterward to pick up the change.
 
 **Switch to the official API key (never expires, billed):**
 ```bash
-npx prompt2pic apikey
+node dist/cli.js apikey
 ```
 Prompts for a `GEMINI_API_KEY` (get one at [aistudio.google.com/apikey](https://aistudio.google.com/apikey)), hidden input, no expiry to manage.
 
 **Toggle between modes once both are configured:**
 ```bash
-npx prompt2pic mode gemini-web   # free, cookie-based
-npx prompt2pic mode apiKey       # official, no expiry
+node dist/cli.js mode gemini-web   # free, cookie-based
+node dist/cli.js mode apiKey       # official, no expiry
 ```
 
 Non-interactive variants (`--psid`, `--psidts`, `--key`) exist for scripting but land the secret in shell history — prefer the interactive prompts.
