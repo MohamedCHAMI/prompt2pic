@@ -78,7 +78,10 @@ async function withBrowser<T>(site: Site, action: () => Promise<T>): Promise<T> 
     // A named profile is copied to a temporary, read-only snapshot by
     // agent-browser. On macOS the real Chrome binary is needed to decrypt
     // cookies from Chrome's Keychain; Chrome for Testing uses a different key.
-    const browserArgs = ['--profile', 'Default', '--headed'];
+    // Headless is fine here: signing in happens in the user's real, separate
+    // Chrome window — this snapshot only ever reads that session, never asks
+    // the user to interact with it.
+    const browserArgs = ['--profile', 'Default'];
     if (platform() === 'darwin' && existsSync(MAC_CHROME)) {
       browserArgs.push('--executable-path', MAC_CHROME);
     }
