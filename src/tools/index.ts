@@ -12,5 +12,9 @@ export {
   handleListHistory,
   handleConfigureOpenAIApiKey,
   handleGenerateOpenAIImage,
+  handleConfigureChatGPTLogin,
+  handleGenerateChatGPTImage,
+  handleConfigureGeminiBrowserLogin,
+  handleGenerateGeminiBrowserImage,
   handleConfigureStorage,
 } from './handlers.js';

@@ -1,3 +1,10 @@
 node_modules
 dist
 .env
+.env.*
+!.env.example
+.nano-banana/
+nano-banana-images/
+nano-banana-videos/
+**/Cookies
+**/Login Data

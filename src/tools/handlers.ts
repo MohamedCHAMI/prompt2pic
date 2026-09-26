@@ -2,6 +2,8 @@ import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { settingsManager } from '../config/index.js';
 import { geminiService } from '../services/gemini.js';
 import { geminiWebClient } from '../services/gemini-web.js';
+import { chatGPTWebClient } from '../services/chatgpt-web.js';
+import { geminiBrowserClient } from '../services/gemini-browser.js';
 import { storageService } from '../services/storage.js';
 import { IImageRecord, IVideoRecord, IGenerateVideoParams, IGeminiResult, IGoogleCookies } from '../types/index.js';
 
@@ -351,6 +353,82 @@ export async function handleGenerateOpenAIImage(args: { prompt: string; model?: 
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
     return textResponse(`OpenAI Generation error: ${msg}`, true);
+  }
+}
+
+export async function handleConfigureChatGPTLogin(): Promise<CallToolResult> {
+  try {
+    await chatGPTWebClient.login();
+    return textResponse(
+      'ChatGPT web session saved. A Chrome window opened for login and closed once the chat UI was detected. ' +
+        'You can now use generate_chatgpt_image.',
+    );
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Failed to configure ChatGPT login';
+    return textResponse(msg, true);
+  }
+}
+
+export async function handleGenerateChatGPTImage(args: { prompt: string }): Promise<CallToolResult> {
+  if (!chatGPTWebClient.isConfigured()) {
+    return textResponse('ChatGPT web session not configured. Use configure_chatgpt_login first.', true);
+  }
+
+  try {
+    const result = await chatGPTWebClient.generateImage(args.prompt);
+
+    if (result.savedPath) {
+      lastImagePath = result.savedPath;
+      await storageService.appendHistory({
+        filePath: result.savedPath,
+        prompt: args.prompt,
+        createdAt: new Date().toISOString(),
+        type: 'generated',
+      });
+    }
+
+    return { content: result.contents };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Image generation failed';
+    return textResponse(`ChatGPT generation error: ${msg}`, true);
+  }
+}
+
+export async function handleConfigureGeminiBrowserLogin(): Promise<CallToolResult> {
+  try {
+    await geminiBrowserClient.login();
+    return textResponse(
+      'Gemini browser session saved. A Chrome window opened for login and closed once the account menu was detected. ' +
+        'You can now use generate_gemini_browser_image.',
+    );
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Failed to configure Gemini browser login';
+    return textResponse(msg, true);
+  }
+}
+
+export async function handleGenerateGeminiBrowserImage(args: { prompt: string }): Promise<CallToolResult> {
+  if (!geminiBrowserClient.isConfigured()) {
+    return textResponse('Gemini browser session not configured. Use configure_gemini_browser_login first.', true);
+  }
+
+  try {
+    const result = await geminiBrowserClient.generateImage(args.prompt);
+
+    if (result.savedPath) {
+      lastImagePath = result.savedPath;
+      await storageService.appendHistory({
+        filePath: result.savedPath,
+        prompt: args.prompt,
+        createdAt: new Date().toISOString(),
+        type: 'generated',
+      });
+    }
+
+    return { content: result.contents };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Image generation failed';
+    return textResponse(`Gemini browser generation error: ${msg}`, true);
   }
 }
 

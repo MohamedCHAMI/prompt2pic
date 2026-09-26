@@ -22,6 +22,10 @@ import {
   handleGetStatus,
   handleGenerateOpenAIImage, handleConfigureStorage,
   handleConfigureOpenAIApiKey,
+  handleConfigureChatGPTLogin,
+  handleGenerateChatGPTImage,
+  handleConfigureGeminiBrowserLogin,
+  handleGenerateGeminiBrowserImage,
   handleListHistory,
 } from './tools/index.js';
 import { IGenerateVideoParams } from './types/index.js';
@@ -64,6 +68,14 @@ export class NanoBananaServer {
           case 'configure_storage': return await handleConfigureStorage(args as any);
           case 'configure_openai_api_key':
             return await handleConfigureOpenAIApiKey(args as { apiKey: string });
+          case 'configure_chatgpt_login':
+            return await handleConfigureChatGPTLogin();
+          case 'generate_chatgpt_image':
+            return await handleGenerateChatGPTImage(args as { prompt: string });
+          case 'configure_gemini_browser_login':
+            return await handleConfigureGeminiBrowserLogin();
+          case 'generate_gemini_browser_image':
+            return await handleGenerateGeminiBrowserImage(args as { prompt: string });
           case 'generate_image':
             return await handleGenerateImage(args as { prompt: string; model?: string; quality?: string });
 

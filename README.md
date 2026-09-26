@@ -133,10 +133,17 @@ ChatGPT will route the request through your machine directly to Gemini using you
 - **`edit_image`**: Edit an existing image based on text instructions and a local file path.
 - **`continue_editing`**: Automatically continue editing the last generated or edited image.
 - **`configure_google_login`**: Set your `__Secure-1PSID` cookie for free personal account access.
+- **`configure_gemini_browser_login`** / **`generate_gemini_browser_image`**: Alternative free mode that drives a real logged-in Chrome session at gemini.google.com (Playwright) instead of scraped cookies — no cookie re-extraction needed, but slower and depends on Gemini's UI staying stable.
 
 ### 🖼️ OpenAI Images (Requires API Key)
 - **`generate_openai_image`**: Generate an image using DALL-E models. Parameters: `prompt`, `model`, `size`.
 - **`configure_openai_api_key`**: Dynamically set your OpenAI API key.
+
+### 🖼️ ChatGPT Web Images (Free, uses your ChatGPT account/subscription)
+- **`configure_chatgpt_login`**: Opens a real Chrome window at chatgpt.com so you can log in by hand. Session is saved to a local persistent browser profile — run once.
+- **`generate_chatgpt_image`**: Drives your logged-in ChatGPT session with Playwright to generate an image. No API key, but slower (real browser) and depends on ChatGPT's UI staying stable. Requires `configure_chatgpt_login` first.
+
+For either browser tool, install Chromium once with `npx playwright install chromium`. The browser opens on your Mac for sign-in and generation.
 
 ### ⚙️ Utilities & Configuration
 - **`get_status`**: Check current configuration, auth mode, and recent generations.
@@ -147,6 +154,10 @@ ChatGPT will route the request through your machine directly to Gemini using you
 ## 📁 Storage
 
 - Images are automatically saved to your home directory: `~/nano-banana-images/`
+- Your ChatGPT web login is stored as a browser profile at `~/.nano-banana/chatgpt-profile/`
+- Your Gemini browser login is stored as a browser profile at `~/.nano-banana/gemini-browser-profile/`
+
+Browser profiles contain login sessions. Keep them private and out of Git.
 
 ## ❤️ Contributing
 

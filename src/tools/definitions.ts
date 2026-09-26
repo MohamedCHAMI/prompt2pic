@@ -255,6 +255,54 @@ const TOOLS = [
     },
   },
   {
+    name: 'configure_chatgpt_login',
+    description:
+      'Set up the free, unofficial "chatgpt-web" mode by opening a real Chrome window against chatgpt.com so you can log in by hand. The session is saved to a persistent local browser profile (no API key needed). Run this once, and again whenever the session expires.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {},
+    },
+  },
+  {
+    name: 'generate_chatgpt_image',
+    description:
+      'Generate an image by driving your logged-in ChatGPT web session (chatgpt.com) with a real browser — uses your ChatGPT account/subscription instead of the OpenAI API. Requires configure_chatgpt_login to have been run first. Slower than the API (drives an actual browser) and depends on ChatGPT\'s UI staying stable.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        prompt: {
+          type: 'string',
+          description: 'Detailed description of the image to generate. Phrase it as an explicit image request.',
+        },
+      },
+      required: ['prompt'],
+    },
+  },
+  {
+    name: 'configure_gemini_browser_login',
+    description:
+      'Set up a free "gemini-browser" mode by opening a real Chrome window against gemini.google.com so you can log in by hand. The session is saved to a persistent local browser profile (no API key, no cookie extraction). Run this once, and again whenever the session expires. This is separate from configure_google_login (raw cookie mode).',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {},
+    },
+  },
+  {
+    name: 'generate_gemini_browser_image',
+    description:
+      'Generate an image by driving your logged-in Gemini web session (gemini.google.com) with a real browser instead of an API key or scraped cookies. Requires configure_gemini_browser_login to have been run first. Slower than the other Gemini modes (drives an actual browser) and depends on Gemini\'s UI staying stable.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        prompt: {
+          type: 'string',
+          description: 'Detailed description of the image to generate. Phrase it as an explicit image request.',
+        },
+      },
+      required: ['prompt'],
+    },
+  },
+  {
     name: 'configure_storage',
     description: 'Set the default directory for saving generated images and videos. Paths can be absolute.',
     inputSchema: {
