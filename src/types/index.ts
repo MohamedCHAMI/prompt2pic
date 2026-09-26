@@ -1,6 +1,6 @@
 import { TextContent, ImageContent } from '@modelcontextprotocol/sdk/types.js';
 
-export type TAuthMode = 'apiKey' | 'gemini-web';
+export type TAuthMode = 'apiKey' | 'gemini-web' | 'browser';
 export type TBrowserBackend = 'playwright' | 'agent-browser';
 
 export interface IGoogleCookies {

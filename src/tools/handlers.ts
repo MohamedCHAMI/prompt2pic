@@ -18,6 +18,17 @@ function textResponse(text: string, isError = false): CallToolResult {
   };
 }
 
+async function runViaAuthMode<T>(
+  viaGeminiWeb: () => Promise<T>,
+  viaApiKey: () => Promise<T>,
+  viaBrowser: () => Promise<T>,
+): Promise<T> {
+  const mode = settingsManager.getAuthMode();
+  if (mode === 'browser') return viaBrowser();
+  if (mode === 'gemini-web') return viaGeminiWeb();
+  return viaApiKey();
+}
+
 export async function handleConfigureApiKey(args: { apiKey: string }): Promise<CallToolResult> {
   try {
     await settingsManager.setApiKey(args.apiKey);
@@ -89,10 +100,14 @@ export async function handleGenerateImage(args: { prompt: string; model?: string
   ensureReady();
 
   try {
-    const result: IGeminiResult =
-      settingsManager.getAuthMode() === 'gemini-web'
-        ? await geminiWebClient.generateImage(args.prompt)
-        : await geminiService.generateImage(args.prompt, args.model, args.quality);
+    const result: IGeminiResult = await runViaAuthMode(
+      () => geminiWebClient.generateImage(args.prompt),
+      () => geminiService.generateImage(args.prompt, args.model, args.quality),
+      () =>
+        settingsManager.getBrowserBackend() === 'agent-browser'
+          ? agentBrowserClient.generateImage('gemini', args.prompt)
+          : geminiBrowserClient.generateImage(args.prompt),
+    );
 
     if (result.savedPath) {
       lastImagePath = result.savedPath;
@@ -119,6 +134,14 @@ export async function handleEditImage(args: {
   quality?: string;
 }): Promise<CallToolResult> {
   ensureReady();
+
+  if (settingsManager.getAuthMode() === 'browser') {
+    return textResponse(
+      'Editing is not supported in browser mode. Use generate_gemini_browser_image for a fresh image, ' +
+        'or configure_api_key / configure_google_login to switch modes for editing.',
+      true,
+    );
+  }
 
   try {
     const result: IGeminiResult =
@@ -166,7 +189,7 @@ export async function handleContinueEditing(args: {
 }
 
 export async function handleGenerateVideo(args: IGenerateVideoParams): Promise<CallToolResult> {
-  if (settingsManager.getAuthMode() === 'gemini-web') {
+  if (settingsManager.getAuthMode() !== 'apiKey') {
     return textResponse(
       '영상 생성은 API 키 모드에서만 지원됩니다. configure_api_key로 Gemini API 키를 설정한 뒤 다시 시도하세요.',
       true,
@@ -230,16 +253,21 @@ export async function handleGetStatus(): Promise<CallToolResult> {
   const videoOutputDir = storageService.getVideoOutputDirectory();
   const authMode = settingsManager.getAuthMode();
   const isWeb = authMode === 'gemini-web';
+  const isBrowser = authMode === 'browser';
 
   const lines = [
     '=== Nano Banana MCP Status ===',
     '',
-    `Auth mode: ${authMode}${isWeb ? ' (free / unofficial consumer Gemini)' : ''}`,
+    `Auth mode: ${authMode}${isWeb ? ' (free / unofficial consumer Gemini)' : ''}${isBrowser ? ' (drives your logged-in Chrome, no stored credentials)' : ''}`,
     `Browser backend: ${settingsManager.getBrowserBackend()}`,
     `Configuration: ${configStatus}`,
   ];
 
-  if (isWeb) {
+  if (isBrowser) {
+    lines.push('Image generation: via your logged-in Gemini web session (model fixed by your account)');
+    lines.push('Image editing: unavailable in browser mode (use apiKey or gemini-web mode)');
+    lines.push('Video generation: unavailable in browser mode (use apiKey mode)');
+  } else if (isWeb) {
     lines.push('Image generation/editing: via consumer Gemini web (model fixed by your account)');
     lines.push('Video generation: unavailable in gemini-web mode (use apiKey mode)');
   } else {
@@ -296,10 +324,9 @@ export async function handleListHistory(args: { count?: number }): Promise<CallT
 }
 
 function ensureReady(): void {
+  const mode = settingsManager.getAuthMode();
   const ready =
-    settingsManager.getAuthMode() === 'gemini-web'
-      ? geminiWebClient.isConfigured()
-      : geminiService.isConfigured();
+    mode === 'browser' ? true : mode === 'gemini-web' ? geminiWebClient.isConfigured() : geminiService.isConfigured();
   if (!ready) {
     throw new Error(settingsManager.getStatusMessage());
   }
@@ -421,16 +448,50 @@ export async function handleConfigureGeminiBrowserLogin(): Promise<CallToolResul
   try {
     if (settingsManager.getBrowserBackend() === 'agent-browser') {
       await agentBrowserClient.login('gemini');
-      return textResponse('Gemini is signed in through your regular Chrome Default profile. You can now use generate_gemini_browser_image.');
+      await settingsManager.setBrowserMode();
+      return textResponse(
+        'Gemini is signed in through your regular Chrome Default profile. ' +
+          'Auth mode set to browser as the default — generate_image now uses this session too.',
+      );
     }
     await geminiBrowserClient.login();
+    await settingsManager.setBrowserMode();
     return textResponse(
       'Gemini browser session saved. A Chrome window opened for login and closed once the account menu was detected. ' +
-        'You can now use generate_gemini_browser_image.',
+        'Auth mode set to browser as the default — generate_image now uses this session too.',
     );
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Failed to configure Gemini browser login';
     return textResponse(msg, true);
+  }
+}
+
+export async function handleGenerateGeminiBrowserVideo(args: { prompt: string }): Promise<CallToolResult> {
+  if (settingsManager.getBrowserBackend() !== 'agent-browser') {
+    return textResponse(
+      'Browser-driven video generation requires the agent-browser backend. Use configure_browser_backend with "agent-browser" first.',
+      true,
+    );
+  }
+
+  try {
+    const result = await agentBrowserClient.generateVideo(args.prompt);
+
+    if (result.savedPath) {
+      lastVideoPath = result.savedPath;
+      await storageService.appendVideoHistory({
+        filePath: result.savedPath,
+        prompt: args.prompt,
+        createdAt: new Date().toISOString(),
+        type: 'generated',
+        model: 'gemini-web (browser)',
+      });
+    }
+
+    return { content: result.contents };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Video generation failed';
+    return textResponse(`Gemini browser video generation error: ${msg}`, true);
   }
 }
 

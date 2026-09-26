@@ -18,7 +18,7 @@ const cookiesSchema = z.object({
 const configSchema = z
   .object({
     // authMode defaults to 'apiKey' so legacy config.json (no authMode) stays valid.
-    authMode: z.enum(['apiKey', 'gemini-web']).default('apiKey'),
+    authMode: z.enum(['apiKey', 'gemini-web', 'browser']).default('apiKey'),
     browserBackend: z.enum(['playwright', 'agent-browser']).default('playwright'),
     geminiApiKey: z.string().min(1).optional(),
     cookies: cookiesSchema.optional(),
@@ -121,6 +121,16 @@ class SettingsManager {
       ...this.current,
       authMode: 'gemini-web',
       cookies,
+    };
+    this.source = 'runtime';
+
+    await this.persistConfig();
+  }
+
+  async setBrowserMode(): Promise<void> {
+    this.current = {
+      ...this.current,
+      authMode: 'browser',
     };
     this.source = 'runtime';
 
@@ -247,6 +257,7 @@ class SettingsManager {
 
   isReady(): boolean {
     if (!this.current) return false;
+    if (this.current.authMode === 'browser') return true;
     if (this.current.authMode === 'gemini-web') {
       return !!this.current.cookies?.secure1psid;
     }
@@ -265,6 +276,10 @@ class SettingsManager {
         '  1. Set GEMINI_AUTH_MODE=gemini-web and GEMINI_SECURE_1PSID, or',
         '  2. Use the configure_google_login tool',
       ].join('\n');
+    }
+
+    if (this.current.authMode === 'browser') {
+      return `Configured (mode: browser [drives your logged-in Chrome via ${this.getBrowserBackend()}], source: ${this.source})`;
     }
 
     if (this.current.authMode === 'gemini-web') {

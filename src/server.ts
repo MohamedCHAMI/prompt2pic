@@ -28,6 +28,7 @@ import {
   handleGenerateChatGPTImage,
   handleConfigureGeminiBrowserLogin,
   handleGenerateGeminiBrowserImage,
+  handleGenerateGeminiBrowserVideo,
   handleListHistory,
 } from './tools/index.js';
 import { IGenerateVideoParams } from './types/index.js';
@@ -83,6 +84,8 @@ export class NanoBananaServer {
             return await handleConfigureGeminiBrowserLogin();
           case 'generate_gemini_browser_image':
             return await handleGenerateGeminiBrowserImage(args as { prompt: string });
+          case 'generate_gemini_browser_video':
+            return await handleGenerateGeminiBrowserVideo(args as { prompt: string });
           case 'generate_image':
             return await handleGenerateImage(args as { prompt: string; model?: string; quality?: string });
 

@@ -18,5 +18,6 @@ export {
   handleGenerateChatGPTImage,
   handleConfigureGeminiBrowserLogin,
   handleGenerateGeminiBrowserImage,
+  handleGenerateGeminiBrowserVideo,
   handleConfigureStorage,
 } from './handlers.js';

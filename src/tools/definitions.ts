@@ -327,6 +327,21 @@ const TOOLS = [
     },
   },
   {
+    name: 'generate_gemini_browser_video',
+    description:
+      'Generate a video by driving Gemini\'s web "Videos" composer (Veo, gemini.google.com/videos) with a real browser instead of an API key. Requires configure_gemini_browser_login and the agent-browser backend. Can take several minutes; the resulting video is saved to disk (video content itself is not returned inline, only its path).',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        prompt: {
+          type: 'string',
+          description: 'Detailed description of the video to generate. Phrase it as an explicit video request.',
+        },
+      },
+      required: ['prompt'],
+    },
+  },
+  {
     name: 'configure_storage',
     description: 'Set the default directory for saving generated images and videos. Paths can be absolute.',
     inputSchema: {
