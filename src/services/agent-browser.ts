@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { homedir, platform } from 'node:os';
 import { join } from 'node:path';
 import { storageService } from './storage.js';
-import type { IGeminiResult } from '../types/index.js';
+import type { IGeminiResult, IGoogleCookies } from '../types/index.js';
 
 type Site = 'chatgpt' | 'gemini';
 
@@ -104,7 +104,43 @@ async function readImage(site: Site, imageExpression: string): Promise<{ base64:
   return { base64: dataUrl.slice('data:image/png;base64,'.length), mimeType: 'image/png' };
 }
 
+interface IRawCookie {
+  name: string;
+  value: string;
+  domain?: string;
+}
+
 export const agentBrowserClient = {
+  /**
+   * Reads __Secure-1PSID/__Secure-1PSIDTS straight from the signed-in Gemini
+   * session in Chrome Default, instead of the user copying them out of DevTools.
+   * The values only ever pass through this process's memory on their way into
+   * settingsManager.setCookies() — never logged, never returned to a caller
+   * that might print them.
+   */
+  async extractGoogleCookies(): Promise<IGoogleCookies> {
+    return withBrowser('gemini', async () => {
+      const signedIn = await waitFor('gemini',
+        `!!document.querySelector(${JSON.stringify(SITES.gemini.signedIn)})`, 20_000);
+      if (!signedIn) {
+        throw new Error('Sign in to gemini.google.com in your regular Chrome Default profile, then retry.');
+      }
+
+      const raw = await command('gemini', ['cookies', 'get', '--json'], 15_000);
+      const parsed = JSON.parse(raw) as IRawCookie[] | { cookies: IRawCookie[] };
+      const list = Array.isArray(parsed) ? parsed : parsed.cookies;
+
+      const secure1psid = list.find((c) => c.name === '__Secure-1PSID')?.value;
+      const secure1psidts = list.find((c) => c.name === '__Secure-1PSIDTS')?.value;
+
+      if (!secure1psid) {
+        throw new Error('__Secure-1PSID cookie not found. Make sure you are signed in to a personal Google account (not a Workspace SSO session) in Chrome Default.');
+      }
+
+      return { secure1psid, secure1psidts };
+    });
+  },
+
   async login(site: Site): Promise<void> {
     const config = SITES[site];
     await withBrowser(site, async () => {

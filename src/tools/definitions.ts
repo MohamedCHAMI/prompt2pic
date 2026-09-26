@@ -33,6 +33,15 @@ const TOOLS = [
     },
   },
   {
+    name: 'auto_configure_google_login',
+    description:
+      'Automatically configure gemini-web mode by extracting __Secure-1PSID/__Secure-1PSIDTS from your already-signed-in Chrome Default profile via agent-browser — no manual DevTools copying. Requires the agent-browser CLI installed and you signed in to gemini.google.com in your regular Chrome. Cookie values are written to local config and never shown in chat.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {},
+    },
+  },
+  {
     name: 'configure_model',
     description:
       'Set the default Gemini model for image generation and editing. Persists across sessions. Use "quality" param to set either "high" (default) or "fast" model tier. High-quality: gemini-3.1-flash-image-preview (default). Fast/cheap: gemini-2.5-flash-image (default fast).',

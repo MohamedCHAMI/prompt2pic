@@ -56,6 +56,21 @@ export async function handleConfigureGoogleLogin(args: {
   }
 }
 
+export async function handleAutoConfigureGoogleLogin(): Promise<CallToolResult> {
+  try {
+    const cookies = await agentBrowserClient.extractGoogleCookies();
+    await settingsManager.setCookies(cookies);
+    geminiWebClient.configure(cookies);
+    return textResponse(
+      'Extracted your Google session cookies from Chrome Default via agent-browser and configured gemini-web mode. ' +
+        'Cookie values were written straight to config, never shown here. You can now use generate_image / edit_image.',
+    );
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Failed to auto-configure Google login';
+    return textResponse(msg, true);
+  }
+}
+
 export async function handleConfigureModel(args: { model: string; quality?: string }): Promise<CallToolResult> {
   try {
     if (args.quality === 'fast') {

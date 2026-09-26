@@ -2,6 +2,7 @@ export { default as TOOLS } from './definitions.js';
 export {
   handleConfigureApiKey,
   handleConfigureGoogleLogin,
+  handleAutoConfigureGoogleLogin,
   handleConfigureModel,
   handleGenerateImage,
   handleEditImage,

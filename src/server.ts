@@ -13,6 +13,7 @@ import {
   TOOLS,
   handleConfigureApiKey,
   handleConfigureGoogleLogin,
+  handleAutoConfigureGoogleLogin,
   handleConfigureModel,
   handleGenerateImage,
   handleEditImage,
@@ -60,6 +61,9 @@ export class NanoBananaServer {
             return await handleConfigureGoogleLogin(
               args as { secure1psid: string; secure1psidts?: string },
             );
+
+          case 'auto_configure_google_login':
+            return await handleAutoConfigureGoogleLogin();
 
           case 'configure_model':
             return await handleConfigureModel(args as { model: string; quality?: string });
