@@ -2,6 +2,7 @@ export { default as TOOLS } from './definitions.js';
 export {
   handleConfigureApiKey,
   handleConfigureGoogleLogin,
+  handleAutoConfigureGoogleLogin,
   handleConfigureModel,
   handleGenerateImage,
   handleEditImage,
@@ -12,5 +13,11 @@ export {
   handleListHistory,
   handleConfigureOpenAIApiKey,
   handleGenerateOpenAIImage,
+  handleConfigureBrowserBackend,
+  handleConfigureChatGPTLogin,
+  handleGenerateChatGPTImage,
+  handleConfigureGeminiBrowserLogin,
+  handleGenerateGeminiBrowserImage,
+  handleGenerateGeminiBrowserVideo,
   handleConfigureStorage,
 } from './handlers.js';

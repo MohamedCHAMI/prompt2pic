@@ -33,6 +33,15 @@ const TOOLS = [
     },
   },
   {
+    name: 'auto_configure_google_login',
+    description:
+      'Automatically configure gemini-web mode by extracting __Secure-1PSID/__Secure-1PSIDTS from your already-signed-in Chrome Default profile via agent-browser — no manual DevTools copying. Requires the agent-browser CLI installed and you signed in to gemini.google.com in your regular Chrome. Cookie values are written to local config and never shown in chat.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {},
+    },
+  },
+  {
     name: 'configure_model',
     description:
       'Set the default Gemini model for image generation and editing. Persists across sessions. Use "quality" param to set either "high" (default) or "fast" model tier. High-quality: gemini-3.1-flash-image-preview (default). Fast/cheap: gemini-2.5-flash-image (default fast).',
@@ -250,6 +259,84 @@ const TOOLS = [
           type: 'string',
           description: 'Image size (e.g. 1024x1024)',
         }
+      },
+      required: ['prompt'],
+    },
+  },
+  {
+    name: 'configure_browser_backend',
+    description: 'Choose the local browser controller used by the ChatGPT and Gemini browser login/image-generation tools. The setting persists across MCP restarts. Playwright uses its dedicated local profiles; agent-browser snapshots your regular Chrome Default profile.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        backend: {
+          type: 'string',
+          enum: ['playwright', 'agent-browser'],
+          description: 'Browser controller. Defaults to playwright.',
+        },
+      },
+      required: ['backend'],
+    },
+  },
+  {
+    name: 'configure_chatgpt_login',
+    description:
+      'Check ChatGPT sign-in in a real browser. With Playwright, sign in to its dedicated saved profile. With agent-browser, sign in to your regular Chrome Default profile first, then run this tool to verify it.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {},
+    },
+  },
+  {
+    name: 'generate_chatgpt_image',
+    description:
+      'Generate an image by driving your logged-in ChatGPT web session (chatgpt.com) with a real browser — uses your ChatGPT account/subscription instead of the OpenAI API. Requires configure_chatgpt_login to have been run first. Slower than the API (drives an actual browser) and depends on ChatGPT\'s UI staying stable.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        prompt: {
+          type: 'string',
+          description: 'Detailed description of the image to generate. Phrase it as an explicit image request.',
+        },
+      },
+      required: ['prompt'],
+    },
+  },
+  {
+    name: 'configure_gemini_browser_login',
+    description:
+      'Check Gemini sign-in in a real browser. With Playwright, sign in to its dedicated saved profile. With agent-browser, sign in to your regular Chrome Default profile first, then run this tool to verify it. This is separate from configure_google_login (raw cookie mode).',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {},
+    },
+  },
+  {
+    name: 'generate_gemini_browser_image',
+    description:
+      'Generate an image by driving your logged-in Gemini web session (gemini.google.com) with a real browser instead of an API key or scraped cookies. Requires configure_gemini_browser_login to have been run first. Slower than the other Gemini modes (drives an actual browser) and depends on Gemini\'s UI staying stable.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        prompt: {
+          type: 'string',
+          description: 'Detailed description of the image to generate. Phrase it as an explicit image request.',
+        },
+      },
+      required: ['prompt'],
+    },
+  },
+  {
+    name: 'generate_gemini_browser_video',
+    description:
+      'Generate a video by driving Gemini\'s web "Videos" composer (Veo, gemini.google.com/videos) with a real browser instead of an API key. Requires configure_gemini_browser_login and the agent-browser backend. Can take several minutes; the resulting video is saved to disk (video content itself is not returned inline, only its path).',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        prompt: {
+          type: 'string',
+          description: 'Detailed description of the video to generate. Phrase it as an explicit video request.',
+        },
       },
       required: ['prompt'],
     },

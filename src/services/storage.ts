@@ -101,6 +101,14 @@ class StorageService {
     return join(this.videoOutputDir, buildVideoFileName(prefix));
   }
 
+  async saveVideo(base64Data: string, prefix: 'video' | 'extend'): Promise<string> {
+    await this.initializeVideo();
+    const filePath = this.getVideoFilePath(prefix);
+    const buffer = Buffer.from(base64Data, 'base64');
+    await writeFile(filePath, buffer);
+    return filePath;
+  }
+
   async readImageAsBase64(filePath: string): Promise<string> {
     const exists = await fileExists(filePath);
     if (!exists) {
