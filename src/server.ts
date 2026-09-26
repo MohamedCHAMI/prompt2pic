@@ -22,6 +22,7 @@ import {
   handleGetStatus,
   handleGenerateOpenAIImage, handleConfigureStorage,
   handleConfigureOpenAIApiKey,
+  handleConfigureBrowserBackend,
   handleConfigureChatGPTLogin,
   handleGenerateChatGPTImage,
   handleConfigureGeminiBrowserLogin,
@@ -70,6 +71,8 @@ export class NanoBananaServer {
             return await handleConfigureOpenAIApiKey(args as { apiKey: string });
           case 'configure_chatgpt_login':
             return await handleConfigureChatGPTLogin();
+          case 'configure_browser_backend':
+            return await handleConfigureBrowserBackend(args as { backend: 'playwright' | 'agent-browser' });
           case 'generate_chatgpt_image':
             return await handleGenerateChatGPTImage(args as { prompt: string });
           case 'configure_gemini_browser_login':

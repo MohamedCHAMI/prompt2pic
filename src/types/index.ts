@@ -1,6 +1,7 @@
 import { TextContent, ImageContent } from '@modelcontextprotocol/sdk/types.js';
 
 export type TAuthMode = 'apiKey' | 'gemini-web';
+export type TBrowserBackend = 'playwright' | 'agent-browser';
 
 export interface IGoogleCookies {
   secure1psid: string;
@@ -9,6 +10,7 @@ export interface IGoogleCookies {
 
 export interface IAppConfig {
   authMode: TAuthMode;
+  browserBackend?: TBrowserBackend;
   geminiApiKey?: string;
   cookies?: IGoogleCookies;
   model?: string;

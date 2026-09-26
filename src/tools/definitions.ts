@@ -255,9 +255,24 @@ const TOOLS = [
     },
   },
   {
+    name: 'configure_browser_backend',
+    description: 'Choose the local browser controller used by the ChatGPT and Gemini browser login/image-generation tools. The setting persists across MCP restarts. Playwright uses its dedicated local profiles; agent-browser snapshots your regular Chrome Default profile.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        backend: {
+          type: 'string',
+          enum: ['playwright', 'agent-browser'],
+          description: 'Browser controller. Defaults to playwright.',
+        },
+      },
+      required: ['backend'],
+    },
+  },
+  {
     name: 'configure_chatgpt_login',
     description:
-      'Set up the free, unofficial "chatgpt-web" mode by opening a real Chrome window against chatgpt.com so you can log in by hand. The session is saved to a persistent local browser profile (no API key needed). Run this once, and again whenever the session expires.',
+      'Check ChatGPT sign-in in a real browser. With Playwright, sign in to its dedicated saved profile. With agent-browser, sign in to your regular Chrome Default profile first, then run this tool to verify it.',
     inputSchema: {
       type: 'object' as const,
       properties: {},
@@ -281,7 +296,7 @@ const TOOLS = [
   {
     name: 'configure_gemini_browser_login',
     description:
-      'Set up a free "gemini-browser" mode by opening a real Chrome window against gemini.google.com so you can log in by hand. The session is saved to a persistent local browser profile (no API key, no cookie extraction). Run this once, and again whenever the session expires. This is separate from configure_google_login (raw cookie mode).',
+      'Check Gemini sign-in in a real browser. With Playwright, sign in to its dedicated saved profile. With agent-browser, sign in to your regular Chrome Default profile first, then run this tool to verify it. This is separate from configure_google_login (raw cookie mode).',
     inputSchema: {
       type: 'object' as const,
       properties: {},

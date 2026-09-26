@@ -133,17 +133,17 @@ ChatGPT will route the request through your machine directly to Gemini using you
 - **`edit_image`**: Edit an existing image based on text instructions and a local file path.
 - **`continue_editing`**: Automatically continue editing the last generated or edited image.
 - **`configure_google_login`**: Set your `__Secure-1PSID` cookie for free personal account access.
-- **`configure_gemini_browser_login`** / **`generate_gemini_browser_image`**: Alternative free mode that drives a real logged-in Chrome session at gemini.google.com (Playwright) instead of scraped cookies — no cookie re-extraction needed, but slower and depends on Gemini's UI staying stable.
+- **`configure_gemini_browser_login`** / **`generate_gemini_browser_image`**: Drive a logged-in browser at gemini.google.com instead of using scraped cookies. Supports the selected browser backend.
 
 ### 🖼️ OpenAI Images (Requires API Key)
 - **`generate_openai_image`**: Generate an image using DALL-E models. Parameters: `prompt`, `model`, `size`.
 - **`configure_openai_api_key`**: Dynamically set your OpenAI API key.
 
 ### 🖼️ ChatGPT Web Images (Free, uses your ChatGPT account/subscription)
-- **`configure_chatgpt_login`**: Opens a real Chrome window at chatgpt.com so you can log in by hand. Session is saved to a local persistent browser profile — run once.
-- **`generate_chatgpt_image`**: Drives your logged-in ChatGPT session with Playwright to generate an image. No API key, but slower (real browser) and depends on ChatGPT's UI staying stable. Requires `configure_chatgpt_login` first.
+- **`configure_chatgpt_login`**: Opens ChatGPT and checks your sign-in. Playwright saves a dedicated local profile; agent-browser reads a temporary snapshot of Chrome Default.
+- **`generate_chatgpt_image`**: Drives your logged-in ChatGPT session to generate an image. No API key, but slower than an API call and depends on ChatGPT's UI staying stable. Requires `configure_chatgpt_login` first.
 
-For either browser tool, install Chromium once with `npx playwright install chromium`. The browser opens on your Mac for sign-in and generation.
+**`configure_browser_backend`** switches both browser image tools between `playwright` (default) and `agent-browser`; `get_status` shows the selected backend. The setting persists across MCP restarts. For Playwright, run `npx playwright install chromium` once. For agent-browser, install the CLI and browser with `npm i -g agent-browser && agent-browser install`. Agent-browser takes a temporary snapshot of your regular Chrome **Default** profile, then deletes that snapshot on close; it does not use the Playwright profiles below. Sign in to ChatGPT or Gemini in your regular Chrome first. On macOS, prompt2pic uses your installed Google Chrome binary so its saved cookies can be read. Browser image editing is not yet available through either backend; use `edit_image` with a Gemini API key or cookie login.
 
 ### ⚙️ Utilities & Configuration
 - **`get_status`**: Check current configuration, auth mode, and recent generations.

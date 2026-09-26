@@ -1,8 +1,8 @@
-import { readFile, writeFile, access, mkdir } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, chmod } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { z } from 'zod';
-import { IAppConfig, IGoogleCookies, TAuthMode } from '../types/index.js';
+import { IAppConfig, IGoogleCookies, TAuthMode, TBrowserBackend } from '../types/index.js';
 
 const CONFIG_DIR = join(homedir(), '.nano-banana');
 const CONFIG_FILE = join(CONFIG_DIR, 'config.json');
@@ -19,6 +19,7 @@ const configSchema = z
   .object({
     // authMode defaults to 'apiKey' so legacy config.json (no authMode) stays valid.
     authMode: z.enum(['apiKey', 'gemini-web']).default('apiKey'),
+    browserBackend: z.enum(['playwright', 'agent-browser']).default('playwright'),
     geminiApiKey: z.string().min(1).optional(),
     cookies: cookiesSchema.optional(),
     model: z.string().min(1).optional(),
@@ -26,22 +27,6 @@ const configSchema = z
     openaiApiKey: z.string().min(1).optional(),
     imageDir: z.string().min(1).optional(),
     videoDir: z.string().min(1).optional(),
-  })
-  .superRefine((cfg, ctx) => {
-    if (cfg.authMode === 'apiKey' && !cfg.geminiApiKey) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'geminiApiKey is required in apiKey mode',
-        path: ['geminiApiKey'],
-      });
-    }
-    if (cfg.authMode === 'gemini-web' && !cfg.cookies?.secure1psid) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: '__Secure-1PSID cookie is required in gemini-web mode',
-        path: ['cookies', 'secure1psid'],
-      });
-    }
   });
 
 type TConfigSource = 'env' | 'file' | 'runtime' | 'none';
@@ -62,14 +47,22 @@ class SettingsManager {
     const envPsid = process.env.GEMINI_SECURE_1PSID?.trim();
     const envPsidts = process.env.GEMINI_SECURE_1PSIDTS?.trim() || undefined;
 
+    let fileConfig: z.infer<typeof configSchema> | undefined;
+    try {
+      fileConfig = configSchema.parse(JSON.parse(await readFile(CONFIG_FILE, 'utf-8')));
+    } catch {
+      // No usable file config.
+    }
+
     // env, gemini-web mode (explicit mode, or 1PSID present without an API key)
     const wantsWeb = envMode === 'gemini-web' || (!envKey && !!envPsid);
     if (wantsWeb && envPsid) {
       this.current = {
+        ...fileConfig,
         authMode: 'gemini-web',
         cookies: { secure1psid: envPsid, secure1psidts: envPsidts },
-        model: envModel,
-        fastModel: envFastModel,
+        model: envModel ?? fileConfig?.model,
+        fastModel: envFastModel ?? fileConfig?.fastModel,
       };
       this.source = 'env';
       return;
@@ -78,23 +71,22 @@ class SettingsManager {
     // env, apiKey mode
     if (envKey) {
       this.current = {
+        ...fileConfig,
         authMode: 'apiKey',
         geminiApiKey: envKey,
-        model: envModel,
-        fastModel: envFastModel,
+        model: envModel ?? fileConfig?.model,
+        fastModel: envFastModel ?? fileConfig?.fastModel,
       };
       this.source = 'env';
       return;
     }
 
-    // file (supports legacy { geminiApiKey, model } without authMode)
-    try {
-      await access(CONFIG_FILE);
-      const raw = await readFile(CONFIG_FILE, 'utf-8');
-      const parsed = JSON.parse(raw);
-      const validated = configSchema.parse(parsed);
+    // File supports legacy { geminiApiKey, model } without authMode.
+    if (fileConfig) {
+      const validated = fileConfig;
       this.current = {
         authMode: validated.authMode,
+        browserBackend: validated.browserBackend,
         geminiApiKey: validated.geminiApiKey,
         cookies: validated.cookies,
         model: envModel ?? validated.model,
@@ -104,8 +96,6 @@ class SettingsManager {
         videoDir: validated.videoDir,
       };
       this.source = 'file';
-    } catch {
-      // no usable config found
     }
   }
 
@@ -114,11 +104,9 @@ class SettingsManager {
       throw new Error('API key cannot be empty');
     }
     this.current = {
+      ...this.current,
       authMode: 'apiKey',
       geminiApiKey: apiKey,
-      cookies: this.current?.cookies,
-      model: this.current?.model,
-      fastModel: this.current?.fastModel,
     };
     this.source = 'runtime';
 
@@ -130,11 +118,9 @@ class SettingsManager {
       throw new Error('__Secure-1PSID cookie is required');
     }
     this.current = {
+      ...this.current,
       authMode: 'gemini-web',
       cookies,
-      geminiApiKey: this.current?.geminiApiKey,
-      model: this.current?.model,
-      fastModel: this.current?.fastModel,
     };
     this.source = 'runtime';
 
@@ -174,6 +160,30 @@ class SettingsManager {
     await this.persistConfig();
   }
 
+  async setBrowserBackend(backend: TBrowserBackend): Promise<void> {
+    if (backend !== 'playwright' && backend !== 'agent-browser') {
+      throw new Error('Browser backend must be playwright or agent-browser.');
+    }
+    // Keep environment credentials in the environment. Changing this preference
+    // must not copy them into config.json.
+    let fileConfig: Record<string, unknown> = {};
+    try {
+      fileConfig = JSON.parse(await readFile(CONFIG_FILE, 'utf-8'));
+    } catch (err) {
+      if (!(err instanceof Error && 'code' in err && err.code === 'ENOENT')) throw err;
+    }
+    fileConfig.browserBackend = backend;
+    await mkdir(CONFIG_DIR, { recursive: true });
+    await writeFile(CONFIG_FILE, JSON.stringify(fileConfig, null, 2), { mode: 0o600 });
+    await chmod(CONFIG_FILE, 0o600);
+    if (!this.current) this.current = { authMode: 'apiKey' };
+    this.current.browserBackend = backend;
+  }
+
+  getBrowserBackend(): TBrowserBackend {
+    return this.current?.browserBackend ?? 'playwright';
+  }
+
   getFastModel(): string {
     return this.current?.fastModel ?? DEFAULT_FAST_MODEL;
   }
@@ -186,6 +196,7 @@ class SettingsManager {
     if (!this.current) return;
 
     const data: Record<string, unknown> = { authMode: this.current.authMode };
+    data.browserBackend = this.getBrowserBackend();
     if (this.current.geminiApiKey) {
       data.geminiApiKey = this.current.geminiApiKey;
     }
@@ -210,7 +221,8 @@ class SettingsManager {
     }
 
     await mkdir(CONFIG_DIR, { recursive: true });
-    await writeFile(CONFIG_FILE, JSON.stringify(data, null, 2));
+    await writeFile(CONFIG_FILE, JSON.stringify(data, null, 2), { mode: 0o600 });
+    await chmod(CONFIG_FILE, 0o600);
   }
 
   getModel(): string {
@@ -301,4 +313,3 @@ class SettingsManager {
 }
 
 export const settingsManager = new SettingsManager();
-

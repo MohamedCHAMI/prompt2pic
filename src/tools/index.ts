@@ -12,6 +12,7 @@ export {
   handleListHistory,
   handleConfigureOpenAIApiKey,
   handleGenerateOpenAIImage,
+  handleConfigureBrowserBackend,
   handleConfigureChatGPTLogin,
   handleGenerateChatGPTImage,
   handleConfigureGeminiBrowserLogin,

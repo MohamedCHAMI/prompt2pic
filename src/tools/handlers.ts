@@ -4,8 +4,9 @@ import { geminiService } from '../services/gemini.js';
 import { geminiWebClient } from '../services/gemini-web.js';
 import { chatGPTWebClient } from '../services/chatgpt-web.js';
 import { geminiBrowserClient } from '../services/gemini-browser.js';
+import { agentBrowserClient } from '../services/agent-browser.js';
 import { storageService } from '../services/storage.js';
-import { IImageRecord, IVideoRecord, IGenerateVideoParams, IGeminiResult, IGoogleCookies } from '../types/index.js';
+import { IImageRecord, IVideoRecord, IGenerateVideoParams, IGeminiResult, IGoogleCookies, TBrowserBackend } from '../types/index.js';
 
 let lastImagePath: string | null = null;
 let lastVideoPath: string | null = null;
@@ -219,6 +220,7 @@ export async function handleGetStatus(): Promise<CallToolResult> {
     '=== Nano Banana MCP Status ===',
     '',
     `Auth mode: ${authMode}${isWeb ? ' (free / unofficial consumer Gemini)' : ''}`,
+    `Browser backend: ${settingsManager.getBrowserBackend()}`,
     `Configuration: ${configStatus}`,
   ];
 
@@ -358,6 +360,10 @@ export async function handleGenerateOpenAIImage(args: { prompt: string; model?: 
 
 export async function handleConfigureChatGPTLogin(): Promise<CallToolResult> {
   try {
+    if (settingsManager.getBrowserBackend() === 'agent-browser') {
+      await agentBrowserClient.login('chatgpt');
+      return textResponse('ChatGPT is signed in through your regular Chrome Default profile. You can now use generate_chatgpt_image.');
+    }
     await chatGPTWebClient.login();
     return textResponse(
       'ChatGPT web session saved. A Chrome window opened for login and closed once the chat UI was detected. ' +
@@ -370,12 +376,14 @@ export async function handleConfigureChatGPTLogin(): Promise<CallToolResult> {
 }
 
 export async function handleGenerateChatGPTImage(args: { prompt: string }): Promise<CallToolResult> {
-  if (!chatGPTWebClient.isConfigured()) {
+  if (settingsManager.getBrowserBackend() === 'playwright' && !chatGPTWebClient.isConfigured()) {
     return textResponse('ChatGPT web session not configured. Use configure_chatgpt_login first.', true);
   }
 
   try {
-    const result = await chatGPTWebClient.generateImage(args.prompt);
+    const result = settingsManager.getBrowserBackend() === 'agent-browser'
+      ? await agentBrowserClient.generateImage('chatgpt', args.prompt)
+      : await chatGPTWebClient.generateImage(args.prompt);
 
     if (result.savedPath) {
       lastImagePath = result.savedPath;
@@ -396,6 +404,10 @@ export async function handleGenerateChatGPTImage(args: { prompt: string }): Prom
 
 export async function handleConfigureGeminiBrowserLogin(): Promise<CallToolResult> {
   try {
+    if (settingsManager.getBrowserBackend() === 'agent-browser') {
+      await agentBrowserClient.login('gemini');
+      return textResponse('Gemini is signed in through your regular Chrome Default profile. You can now use generate_gemini_browser_image.');
+    }
     await geminiBrowserClient.login();
     return textResponse(
       'Gemini browser session saved. A Chrome window opened for login and closed once the account menu was detected. ' +
@@ -408,12 +420,14 @@ export async function handleConfigureGeminiBrowserLogin(): Promise<CallToolResul
 }
 
 export async function handleGenerateGeminiBrowserImage(args: { prompt: string }): Promise<CallToolResult> {
-  if (!geminiBrowserClient.isConfigured()) {
+  if (settingsManager.getBrowserBackend() === 'playwright' && !geminiBrowserClient.isConfigured()) {
     return textResponse('Gemini browser session not configured. Use configure_gemini_browser_login first.', true);
   }
 
   try {
-    const result = await geminiBrowserClient.generateImage(args.prompt);
+    const result = settingsManager.getBrowserBackend() === 'agent-browser'
+      ? await agentBrowserClient.generateImage('gemini', args.prompt)
+      : await geminiBrowserClient.generateImage(args.prompt);
 
     if (result.savedPath) {
       lastImagePath = result.savedPath;
@@ -429,6 +443,16 @@ export async function handleGenerateGeminiBrowserImage(args: { prompt: string })
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Image generation failed';
     return textResponse(`Gemini browser generation error: ${msg}`, true);
+  }
+}
+
+export async function handleConfigureBrowserBackend(args: { backend: TBrowserBackend }): Promise<CallToolResult> {
+  try {
+    await settingsManager.setBrowserBackend(args.backend);
+    return textResponse(`Browser image tools now use ${args.backend}. Run get_status to review the setting.`);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Failed to set browser backend';
+    return textResponse(msg, true);
   }
 }
 
